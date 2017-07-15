@@ -10,11 +10,11 @@ https://github.com/migurski/atkinson
 ``` bash
 gcc -shared -o atk.so -fPIC atk_mod.c
 ```
-    (NB or Win or OSX equivalents using alternative compilers, not tried) to 
-    produce the shared object `atk.so` which can then be imported in python 
-    using `ctypes.CDLL` and passed the image array to work on either using:
+  (NB or Win or OSX equivalents using alternative compilers, not tried) to 
+  produce the shared object `atk.so` which can then be imported in python 
+  using `ctypes.CDLL` and passed the image array to work on either using:
 
-    1.a  `tobytes()` like this
+  1.a  `tobytes()` like this
     
 ``` python
 import ctypes
@@ -29,7 +29,7 @@ atklib.atk(im.size[0], im.size[1],
 Image.frombytes('L', im.size, img).save('lenna2_bw.png')
 ```
 
-    1.b or `fromarray()` with numpy like this
+  1.b or `fromarray()` with numpy like this
 
 ``` python
 import ctypes
@@ -51,7 +51,7 @@ library) using the `setup.py` file run with:
 python3 setup.py build_ext --inplace
 ```
 
-    imported into python without resorting to ctypes
+  imported into python without resorting to ctypes
 
 ``` python
 from PIL import Image

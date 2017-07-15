@@ -32,7 +32,6 @@ from PIL import Image
 import numpy as np
 
 PATH = '/home/patrick/raspberry_pi/atkinson/'
-from atk_mod_a import atk as atk2
 im = Image.open(PATH + 'lenna_l2.png')
 img = np.array(im)
 atklib.atk(img.shape[0], img.shape[1], 

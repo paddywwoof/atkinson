@@ -26,7 +26,7 @@ static PyObject *atk(PyObject *self, PyObject *args)
     // access the pixel values using the *pixels pointer. We need unsigned
     pixels = byte_object->ob_sval; // char behaviour (will give compile warning)
     
-    if(w * h != byte_object->ob_base.ob_size) // not intuitive location for size
+    if(w * h != Py_SIZE(byte_object)) // not intuitive location for size
     {
         // fail if the given dimensions don't seem to match the passed image
         return NULL;
@@ -84,17 +84,25 @@ static PyMethodDef AtkMethods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-static struct PyModuleDef atkmodule = {
-   PyModuleDef_HEAD_INIT,
-   "spam",   /* name of module */
-   NULL,     /* module documentation, may be NULL */
-   -1,       /* size of per-interpreter state of the module,
-                or -1 if the module keeps state in global variables. */
-   AtkMethods
-};
+/* There is quite a difference between python 2 and 3 for the actual 
+ * module init function. Py3 uses a different function that needs a
+ * whole PyModuleDef struct passing to it*/
+#if PY_MAJOR_VERSION >= 3 
+  static struct PyModuleDef atkmodule = {
+     PyModuleDef_HEAD_INIT,
+     "atk",    /* name of module */
+     NULL,     /* module documentation, may be NULL */
+     -1,       /* size of per-interpreter state of the module,
+                  or -1 if the module keeps state in global variables. */
+     AtkMethods
+  };
 
-/* bootstrap function, called automatically when you 'import atk' */
-PyMODINIT_FUNC PyInit_atk(void) {
-    return PyModule_Create(&atkmodule);
-}
-
+  /* bootstrap function, called automatically when you 'import atk' */
+  PyMODINIT_FUNC PyInit_atk(void) {
+      return PyModule_Create(&atkmodule);
+  }
+#else
+  PyMODINIT_FUNC initatk(void) {
+      (void)Py_InitModule("atk", AtkMethods);
+  }
+#endif

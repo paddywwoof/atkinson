@@ -78,7 +78,8 @@ of the module and methods has changed see `python_module/atkmodule.c`
 at the bottom `PyMethodDef`,`PyModuleDef`and `PyMODINIT_FUNC`. More
 significantly I couldn't get it to work without importing the
 pixels as part of a python object, specifically `PyBytesObject`
-which holds the pixel as part of the struct `->ob_sval[]`. It was compiled
+which holds the pixel as part of the struct `->ob_sval[]`. NB the revised
+argument list to `PyArg_ParseTuple`: `iiS`. It was compiled
 using the `setup.py` in the subdirectory with
 
 ``` bash
@@ -106,4 +107,9 @@ to remove bounds checking that might need to be removed if the function
 was designed to do anything more complicated).
 
 The 'standard' python module using `atkmodule.c` is slightly more complicated
-in that it needs
+than the original in that it needs an additional pointer of `unsigned char*`
+for accessing the char array of pixels. But the use of the `PyBytesObject`
+is probably safer and reduces the likelyhood of segmentation faults etc.
+... Though overwriting the bytes of the immutable bytes object might be
+seen as slightly dodgy! This seems to run faster than the vanilla C version
+but not quite as fast as the cython. 

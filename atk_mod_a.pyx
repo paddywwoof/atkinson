@@ -1,17 +1,16 @@
 from __future__ import division
-import numpy as np
-cimport numpy as np
+cimport numpy as cnp # to be clear this is different from 'import numpy'
 
-cdef inline np.uint8_t adderror(np.uint8_t b, int e):
+cdef inline cnp.uint8_t adderror(cnp.uint8_t b, int e):
   return min(max(b + e, 0x00), 0xFF) 
 
 cimport cython
 @cython.boundscheck(False) # turn off bounds-checking for entire function
-def atk(np.ndarray[np.uint8_t, ndim=2] pixels):
+def atk(cnp.ndarray[cnp.uint8_t, ndim=2] pixels):
   cdef:
     int x, y, off, err
     int threshold = 127
-    np.uint8_t old, new
+    cnp.uint8_t old, new
     int h = pixels.shape[0]
     int w = pixels.shape[1]
   

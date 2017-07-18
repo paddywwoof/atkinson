@@ -5,7 +5,11 @@ Following a questions on raspberry pi forum https://www.raspberrypi.org/forums/v
 I tried various ways of implementing the fairly simple functionality of the module here
 https://github.com/migurski/atkinson
 
-1. Using a simplified version of the migurski C code `atk_mod.c` compiled to a shared object using:
+Hopefully these notes can be used by others as a template for adding additional
+C functionality to their python applications.
+
+1. Using a simplified version of the migurski C code `atk_mod.c` compiled
+to a shared object using:
 
 ``` bash
 gcc -shared -o atk.so -fPIC atk_mod.c
@@ -20,8 +24,7 @@ gcc -shared -o atk.so -fPIC atk_mod.c
 import ctypes
 from PIL import Image
 
-PATH = '/home/patrick/raspberry_pi/atkinson/'
-atklib = ctypes.CDLL(PATH + 'atk.so')
+atklib = ctypes.CDLL('/path/to/atk.so')
 im = Image.open(PATH + 'lenna_l2.png')
 img = im.tobytes()
 atklib.atk(im.size[0], im.size[1], 
@@ -36,8 +39,8 @@ import ctypes
 from PIL import Image
 import numpy as np
 
-PATH = '/home/patrick/raspberry_pi/atkinson/'
-im = Image.open(PATH + 'lenna_l2.png')
+atklib = ctypes.CDLL('/path/to/atk.so')
+im = Image.open('lenna_l2.png')
 img = np.array(im)
 atklib.atk(img.shape[0], img.shape[1], 
            img.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte)))
@@ -51,23 +54,56 @@ library) using the `setup.py` file run with:
 python3 setup.py build_ext --inplace
 ```
 
-  imported into python without resorting to ctypes
+  which creates the shared library in the same directory. Check the docs
+  for how to build and install more generally, and what you need to do
+  on Win or OSX systems.
+  https://docs.python.org/3/extending/building.html#building
+  This can be imported into python without resorting to ctypes
 
 ``` python
 from PIL import Image
 import numpy as np
 import atk_mod_a
-PATH = '/home/patrick/raspberry_pi/atkinson/'
 
-img = np.array(Image.open(PATH + 'lenna_l2.png'))
+img = np.array(Image.open('lenna_l2.png'))
 atk_mod_a.atk(img)
 Image.fromarray(img).save('lenna2_bw.png')
 
 ```
 
-Although the pyx file is similar to C, the shared object file produced by 
+3. Using the standard python module compilation system (*which is what I
+originally set out to do*). This is all in the sub-directory `python_module/`. 
+There were a few modifications to the original migurski code. The definition 
+of the module and methods has changed see `python_module/atkmodule.c`
+at the bottom `PyMethodDef`,`PyModuleDef`and `PyMODINIT_FUNC`. More
+significantly I couldn't get it to work without importing the
+pixels as part of a python object, specifically `PyBytesObject`
+which holds the pixel as part of the struct `->ob_sval[]`. It was compiled
+using the `setup.py` in the subdirectory with
+
+``` bash
+python3 setup.py build_ext --inplace
+```
+
+  imported into python without ctypes or numpy (i.e. 
+
+``` python
+from PIL import Image
+
+import atk
+im = Image.open('lenna_l2.png')
+
+img = im.tobytes()
+atk.atk(im.size[0], im.size[1], img)
+Image.frombytes('L', im.size, img).save('lenna_bw.png')
+```
+
+Although the size pyx file is similar to C, the shared object file produced by 
 cython is much bigger. However it does run slightly faster than the vanilla 
 C version and using cython keeps the option of using other numpy (highly 
 optimised) functionality inside the function if needed. (Note the decorator 
 to remove bounds checking that might need to be removed if the function 
-was designed to do anything more complicated)
+was designed to do anything more complicated).
+
+The 'standard' python module using `atkmodule.c` is slightly more complicated
+in that it needs

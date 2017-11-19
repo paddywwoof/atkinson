@@ -1,0 +1,10 @@
+[package]
+name = "atk_mod_r"
+version = "0.1.0"
+authors = ["paddywwof <support@eldwick.org.uk>"]
+
+[dependencies]
+
+[lib]
+name = "atk_mod_r"
+crate-type = ["cdylib"]

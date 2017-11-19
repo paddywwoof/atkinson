@@ -99,6 +99,14 @@ atk.atk(im.size[0], im.size[1], img)
 Image.frombytes('L', im.size, img).save('lenna_bw.png')
 ```
 
+4. Using Rust as in the sub-directory `rust`. The project was created using
+`cargo new rust` in the top directory then Cargo.toml edited and src/lib.rs
+relatively easily (for someone new to rust!) modified from the cython code.
+A noticeable difference is the explicity casting between i32, u8 and usize.
+
+``` bash
+cargo build --release
+```
 Although the size pyx file is similar to C, the shared object file produced by 
 cython is much bigger. However it does run slightly faster than the vanilla 
 C version and using cython keeps the option of using other numpy (highly 
@@ -112,4 +120,14 @@ for accessing the char array of pixels. But the use of the `PyBytesObject`
 is probably safer and reduces the likelyhood of segmentation faults etc.
 ... Though overwriting the bytes of the immutable bytes object might be
 seen as slightly dodgy! This seems to run faster than the vanilla C version
-but not quite as fast as the cython. 
+but not quite as fast as the cython. Fastest of all is the rust library
+which is interesting.
+
+``` bash
+1.593s for 10x 1a vanilla C version using ctypes, passing PIL.tobytes
+1.589s for 10x 1b vanilla C version using ctypes, passing numpy array
+1.362s for 10x 2 cython version using standard import passing numpy array
+1.365s for 10x 3 standard python module import passing PIL.tobytes
+1.299s for 10x 4a vanilla rust version using ctypes, passing PIL.tobytes
+1.301s for 10x 4b vanilla rust version using ctypes, passing numpy array
+``` 

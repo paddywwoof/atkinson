@@ -7,6 +7,15 @@ fn adderror(b: u8, e: i32) -> u8 {
   min(0xFFi32, max(0x00i32, b as i32 + e)) as u8 // e might be negative so i32
 }
 
+/// Rather insecure function to modify image array in place. Passing incorrect
+/// height or width arguments will probably cause a segmentation error
+///
+/// # Arguments
+///
+/// * `h` - height or array
+/// * `w` - width of array
+/// * `ptr` - pointer to unsigned char array (i.e. uint8, c_ubyte, c_char_p etc)
+/// 
 #[no_mangle]
 pub extern "C" fn atk(h: i32, w: i32, ptr: *mut u8) {
   assert!(!ptr.is_null());
@@ -16,10 +25,10 @@ pub extern "C" fn atk(h: i32, w: i32, ptr: *mut u8) {
   };
   for y in 0..h {
     for x in 0..w {
-      let p = y * h + x;
+      let p = y * w + x;
       let old = pixels[p as usize];
       let new = if old > THRSHLD { 0xFFu8 } else { 0x00u8 };
-      let err = (old as i32 - new as i32) >> 3; //divide by 8
+      let err = (old as i32 - new as i32) / 8; // just as fast as `>> 3`
       pixels[p as usize] = new;
       // now distribute the error...
       if (x+1) < w {            // x+1, y

@@ -9,6 +9,7 @@ Hopefully these notes can be used by others as a template for adding external co
 functions to their python applications. This is a summary of the speed improvements, the
 non-accelerated version of the code (see atk_python.py) takes 120 to 180 times as long to
 run. The simplest increase in speed comes from using numba which gets round the whole
+complexity of compiling modules at a stroke!
 
 
 ``` bash
@@ -26,41 +27,42 @@ run. The simplest increase in speed comes from using numba which gets round the 
 1. Using a simplified version of the migurski C code `atk_mod.c` compiled
 to a shared object using:
 
-``` bash
-gcc -shared -o atk.so -fPIC atk_mod.c
-```
+  ``` bash
+  gcc -shared -o atk.so -fPIC atk_mod.c
+  ```
+
   (NB or Win or OSX equivalents using alternative compilers, not tried) to 
   produce the shared object `atk.so` which can then be imported in python 
   using `ctypes.CDLL` and passed the image array to work on either using:
 
   1.a  `tobytes()` like this
     
-``` python
-import ctypes
-from PIL import Image
+  ``` python
+  import ctypes
+  from PIL import Image
 
-atklib = ctypes.CDLL('/path/to/atk.so')
-im = Image.open(PATH + 'lenna_l2.png')
-img = im.tobytes()
-atklib.atk(im.size[0], im.size[1], 
-           ctypes.c_char_p(img))
-Image.frombytes('L', im.size, img).save('lenna2_bw.png')
-```
+  atklib = ctypes.CDLL('/path/to/atk.so')
+  im = Image.open(PATH + 'lenna_l2.png')
+  img = im.tobytes()
+  atklib.atk(im.size[0], im.size[1], 
+            ctypes.c_char_p(img))
+  Image.frombytes('L', im.size, img).save('lenna2_bw.png')
+  ```
 
   1.b or `fromarray()` with numpy like this
 
-``` python
-import ctypes
-from PIL import Image
-import numpy as np
+  ``` python
+  import ctypes
+  from PIL import Image
+  import numpy as np
 
-atklib = ctypes.CDLL('/path/to/atk.so')
-im = Image.open('lenna_l2.png')
-img = np.array(im)
-atklib.atk(img.shape[0], img.shape[1], 
-           img.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte)))
-Image.fromarray(img).save('lenna2_bw.png')
-```
+  atklib = ctypes.CDLL('/path/to/atk.so')
+  im = Image.open('lenna_l2.png')
+  img = np.array(im)
+  atklib.atk(img.shape[0], img.shape[1], 
+            img.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte)))
+  Image.fromarray(img).save('lenna2_bw.png')
+  ```
 
 2. Using python converted to C:
 
@@ -93,11 +95,11 @@ Image.fromarray(img).save('lenna2_bw.png')
   python3 setup.py build_ext --inplace
   ```
 
-    which creates the shared library in the same directory. Check the docs
-    for how to build and install more generally, and what you need to do
-    on Win or OSX systems.
-    https://docs.python.org/3/extending/building.html#building
-    This can be imported into python without resorting to ctypes
+  which creates the shared library in the same directory. Check the docs
+  for how to build and install more generally, and what you need to do
+  on Win or OSX systems.
+  https://docs.python.org/3/extending/building.html#building
+  This can be imported into python without resorting to ctypes
 
   ``` python
   from PIL import Image
@@ -107,7 +109,6 @@ Image.fromarray(img).save('lenna2_bw.png')
   img = np.array(Image.open('lenna_l2.png'))
   atk_mod_a.atk(img)
   Image.fromarray(img).save('lenna2_bw.png')
-
   ```
 
 3. Using the standard python module compilation system (*which is what I
@@ -121,49 +122,53 @@ which holds the pixel as part of the struct `->ob_sval[]`. NB the revised
 argument list to `PyArg_ParseTuple`: `iiS`. It was compiled
 using the `setup.py` in the subdirectory with
 
-``` bash
-python3 setup.py build_ext --inplace
-```
+  ``` bash
+  python3 setup.py build_ext --inplace
+  ```
 
-  imported into python without ctypes or numpy (i.e. 
+    imported into python without ctypes or numpy (i.e. 
 
-``` python
-from PIL import Image
+  ``` python
+  from PIL import Image
 
-import python_module.atk
-im = Image.open('lenna_l2.png')
+  import python_module.atk
+  im = Image.open('lenna_l2.png')
 
-img = im.tobytes()
-python_module.atk.atk(im.size[0], im.size[1], img)
-Image.frombytes('L', im.size, img).save('lenna_bw.png')
-```
+  img = im.tobytes()
+  python_module.atk.atk(im.size[0], im.size[1], img)
+  Image.frombytes('L', im.size, img).save('lenna_bw.png')
+  ```
 
 4. Using Rust as in the sub-directory `rust`. The project was created using
 `cargo new rust` in the top directory then Cargo.toml edited and src/lib.rs
 relatively easily (for someone new to rust!) modified from the cython code.
 A noticeable difference is the explicit casting between i32, u8 and usize.
 
-``` bash
-cd rust_module
-cargo build --release
-cd ..
-```
-The option using pyo3 is in the subdirectory pyo3_module. Although there is,
-in theory, the option of using setup.py as with cython and the standard python
-module. At the moment it seems easier to create the library file then rename and
-move it to the top folder. (setup.py defaults to creating a debug version)
+  ``` bash
+  cd rust_module
+  cargo build --release
+  cd ..
+  ```
 
-``` bash
-cd pyo3_module
-cargo build --release
-mv target/release/libatk_mod_rm.so ../atk_mod_rm.so
-cd ..
-```
+  The option using pyo3 is in the subdirectory pyo3_module. Although there is,
+  in theory, the option of using setup.py as with cython and the standard python
+  module. At the moment it seems easier to create the library file then rename and
+  move it to the top folder. (setup.py defaults to creating a debug version)
 
-The pyo3 module is a little bit slower than the C python one but it is simpler
-and safer in that bounds checking happens and processing is done using the
-rust ndarray crate - which, as with cython and numba, allows lots of other
-functionality to be easily accessed in the module.
+  ``` bash
+  cd pyo3_module
+  cargo build --release
+  mv target/release/libatk_mod_rm.so ../atk_mod_rm.so
+  cd ..
+  ```
+
+  i.e. The file gets a lib stuck on the begining of its name which has to be
+  removed!
+  
+  The pyo3 module is a little bit slower than the C python one but it is simpler
+  and safer in that bounds checking happens and processing is done using the
+  rust ndarray crate - which, as with cython and numba, allows lots of other
+  functionality to be easily accessed in the module.
 
 Although the size pyx file is similar to C, the shared object file produced by 
 cython is much bigger. However it does run slightly faster than the standard

@@ -5,8 +5,23 @@ Following a questions on raspberry pi forum https://www.raspberrypi.org/forums/v
 I tried various ways of implementing the fairly simple functionality of the module here
 https://github.com/migurski/atkinson
 
-Hopefully these notes can be used by others as a template for adding additional
-C functionality to their python applications.
+Hopefully these notes can be used by others as a template for adding external compiled
+functions to their python applications. This is a summary of the speed improvements, the
+non-accelerated version of the code (see atk_python.py) takes 120 to 180 times as long to
+run. The simplest increase in speed comes from using numba which gets round the whole
+
+
+``` bash
+20400ms for non-accelerated PIL Image pixel manipulation 
+140ms for 1a vanilla C version using ctypes, passing PIL.tobytes
+138ms for 1b vanilla C version using ctypes, passing numpy array
+127ms for 2a numba @njit decorator on numpy array
+116ms for 2b cython version using standard import passing numpy array
+118ms for 3 standard C python module import passing PIL.tobytes
+115ms for 4a vanilla rust version using ctypes, passing PIL.tobytes
+116ms for 4b vanilla rust version using ctypes, passing numpy array
+169ms for 4c python module using rust pyo3 passing numpy array
+```
 
 1. Using a simplified version of the migurski C code `atk_mod.c` compiled
 to a shared object using:
@@ -47,29 +62,53 @@ atklib.atk(img.shape[0], img.shape[1],
 Image.fromarray(img).save('lenna2_bw.png')
 ```
 
-2. Using cython code `atk_mod_a.pyx` compiled to a python module (shared 
-library) using the `setup.py` file run with:
+2. Using python converted to C:
 
-``` bash
-python3 setup.py build_ext --inplace
-```
+  2.a First using numba which is very simple. You need to have numba
+  installed
+  
 
-  which creates the shared library in the same directory. Check the docs
-  for how to build and install more generally, and what you need to do
-  on Win or OSX systems.
-  https://docs.python.org/3/extending/building.html#building
-  This can be imported into python without resorting to ctypes
+  ``` bash
+  pip3 install numba --user
+  ```
 
-``` python
-from PIL import Image
-import numpy as np
-import atk_mod_a
+  ``` python
+  from numba import njit
 
-img = np.array(Image.open('lenna_l2.png'))
-atk_mod_a.atk(img)
-Image.fromarray(img).save('lenna2_bw.png')
+  @njit
+  def  adderror(b, e):
+  return min(max(b + e, 0x00), 0xFF) 
 
-```
+  @njit(cache=True)
+  def atk(pixels):
+  h = pixels.shape[0]
+  w = pixels.shape[1]
+  ...
+  ```
+
+  2.b Using cython code `atk_mod_a.pyx` compiled to a python module (shared 
+  library) using the `setup.py` file run with:
+
+  ``` bash
+  python3 setup.py build_ext --inplace
+  ```
+
+    which creates the shared library in the same directory. Check the docs
+    for how to build and install more generally, and what you need to do
+    on Win or OSX systems.
+    https://docs.python.org/3/extending/building.html#building
+    This can be imported into python without resorting to ctypes
+
+  ``` python
+  from PIL import Image
+  import numpy as np
+  import atk_mod_a
+
+  img = np.array(Image.open('lenna_l2.png'))
+  atk_mod_a.atk(img)
+  Image.fromarray(img).save('lenna2_bw.png')
+
+  ```
 
 3. Using the standard python module compilation system (*which is what I
 originally set out to do*). This is all in the sub-directory `python_module/`. 
@@ -91,25 +130,45 @@ python3 setup.py build_ext --inplace
 ``` python
 from PIL import Image
 
-import atk
+import python_module.atk
 im = Image.open('lenna_l2.png')
 
 img = im.tobytes()
-atk.atk(im.size[0], im.size[1], img)
+python_module.atk.atk(im.size[0], im.size[1], img)
 Image.frombytes('L', im.size, img).save('lenna_bw.png')
 ```
 
 4. Using Rust as in the sub-directory `rust`. The project was created using
 `cargo new rust` in the top directory then Cargo.toml edited and src/lib.rs
 relatively easily (for someone new to rust!) modified from the cython code.
-A noticeable difference is the explicity casting between i32, u8 and usize.
+A noticeable difference is the explicit casting between i32, u8 and usize.
 
 ``` bash
+cd rust_module
 cargo build --release
+cd ..
 ```
+The option using pyo3 is in the subdirectory pyo3_module. Although there is,
+in theory, the option of using setup.py as with cython and the standard python
+module. At the moment it seems easier to create the library file then rename and
+move it to the top folder. (setup.py defaults to creating a debug version)
+
+``` bash
+cd pyo3_module
+cargo build --release
+mv target/release/libatk_mod_rm.so ../atk_mod_rm.so
+cd ..
+```
+
+The pyo3 module is a little bit slower than the C python one but it is simpler
+and safer in that bounds checking happens and processing is done using the
+rust ndarray crate - which, as with cython and numba, allows lots of other
+functionality to be easily accessed in the module.
+
 Although the size pyx file is similar to C, the shared object file produced by 
-cython is much bigger. However it does run slightly faster than the vanilla 
-C version and using cython keeps the option of using other numpy (highly 
+cython is much bigger. However it does run slightly faster than the standard
+python module written in C and the vanilla C version using ctypes.CDLL
+and using cython keeps the option of using other numpy (highly 
 optimised) functionality inside the function if needed. (Note the decorator 
 to remove bounds checking that might need to be removed if the function 
 was designed to do anything more complicated).
@@ -121,13 +180,5 @@ is probably safer and reduces the likelyhood of segmentation faults etc.
 ... Though overwriting the bytes of the immutable bytes object might be
 seen as slightly dodgy! This seems to run faster than the vanilla C version
 but not quite as fast as the cython. Fastest of all is the rust library
-which is interesting.
-
-``` bash
-1.593s for 10x 1a vanilla C version using ctypes, passing PIL.tobytes
-1.589s for 10x 1b vanilla C version using ctypes, passing numpy array
-1.362s for 10x 2 cython version using standard import passing numpy array
-1.365s for 10x 3 standard python module import passing PIL.tobytes
-1.299s for 10x 4a vanilla rust version using ctypes, passing PIL.tobytes
-1.301s for 10x 4b vanilla rust version using ctypes, passing numpy array
-``` 
+accessed via ctypes. Slowest is the rust library build with pyo3, which is interesting.
+Maybe.

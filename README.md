@@ -126,7 +126,8 @@ using the `setup.py` in the subdirectory with
   python3 setup.py build_ext --inplace
   ```
 
-    imported into python without ctypes or numpy (i.e. 
+  imported into python without
+  ctypes or numpy (i.e. 
 
   ``` python
   from PIL import Image
@@ -151,9 +152,9 @@ A noticeable difference is the explicit casting between i32, u8 and usize.
   ```
 
   The option using pyo3 is in the subdirectory pyo3_module. Although there is,
-  in theory, the option of using setup.py as with cython and the standard python
-  module. At the moment it seems easier to create the library file then rename and
-  move it to the top folder. (setup.py defaults to creating a debug version)
+  in theory, the option of using setup.py --inplace as with cython and the
+  standard python module, at the moment that route seems to make setup.py
+  default to creating a debug version.
 
   ``` bash
   cd pyo3_module
@@ -164,6 +165,15 @@ A noticeable difference is the explicit casting between i32, u8 and usize.
 
   i.e. The file gets a lib stuck on the begining of its name which has to be
   removed!
+
+  The alternative is to generate a wheel file as below, which would make sense for
+  distributing, but for local experimenting you might not want to install it so
+  you would have to extract the module file from the created `dist/atk_mod_rm-etc-etc.whl/atk_mod_rm/`
+  (essentially the wheel is just a zip file) and paste it into top level directory.
+
+  ``` bash
+  python3 setup.py bdist_wheel
+  ```
   
   The pyo3 module is a little bit slower than the C python one but it is simpler
   and safer in that bounds checking happens and processing is done using the

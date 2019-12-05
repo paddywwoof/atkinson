@@ -7,7 +7,7 @@ import ctypes
 from PIL import Image
 import numpy as np
 
-PATH = '/home/patrick/python/atkinson/'
+PATH = '/home/pi/atkinson/'
 atklib = ctypes.CDLL(PATH + 'atk.so')
 atklib_r = ctypes.CDLL(PATH + 'rust/target/release/libatk_mod_r.so')
 import atk_numba
@@ -63,4 +63,4 @@ atk_mod_rm.atk(img)
 Image.fromarray(img).save('lenna9_bw.png')
 ''']]
 for f in funcs:
-  print('{:.0f}ms for {}'.format(timeit.timeit(f[1], setup=setup, number=10) * 1000 / N, f[0]))
+  print('{:.0f}ms for {}'.format(timeit.timeit(f[1], setup=setup, number=N) * 1000 / N, f[0]))

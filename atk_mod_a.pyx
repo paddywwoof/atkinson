@@ -5,7 +5,7 @@ cdef inline cnp.uint8_t adderror(cnp.uint8_t b, int e):
   return min(max(b + e, 0x00), 0xFF) 
 
 cimport cython
-@cython.boundscheck(False) # turn off bounds-checking for entire function
+#@cython.boundscheck(False) # turn off bounds-checking for entire function
 def atk(cnp.ndarray[cnp.uint8_t, ndim=2] pixels):
   cdef:
     int x, y, off, err

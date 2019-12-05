@@ -146,7 +146,7 @@ relatively easily (for someone new to rust!) modified from the cython code.
 A noticeable difference is the explicit casting between i32, u8 and usize.
 
   ``` bash
-  cd rust_module
+  cd rust
   cargo build --release
   cd ..
   ```
@@ -176,7 +176,8 @@ A noticeable difference is the explicit casting between i32, u8 and usize.
   ```
   
   The pyo3 module is a little bit slower than the C python one but it is simpler
-  and safer in that bounds checking happens and processing is done using the
+  and safer in that the function arguments are just a numpy array with w, h
+  obtained from that also bounds checking happens and processing is done using the
   rust ndarray crate - which, as with cython and numba, allows lots of other
   functionality to be easily accessed in the module.
 

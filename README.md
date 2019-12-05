@@ -13,15 +13,15 @@ complexity of compiling modules at a stroke!
 
 
 ``` bash
-20400ms for non-accelerated PIL Image pixel manipulation 
-140ms for 1a vanilla C version using ctypes, passing PIL.tobytes
-138ms for 1b vanilla C version using ctypes, passing numpy array
-127ms for 2a numba @njit decorator on numpy array
-116ms for 2b cython version using standard import passing numpy array
-118ms for 3 standard C python module import passing PIL.tobytes
-115ms for 4a vanilla rust version using ctypes, passing PIL.tobytes
-116ms for 4b vanilla rust version using ctypes, passing numpy array
-169ms for 4c python module using rust pyo3 passing numpy array
+20,400ms for non-accelerated PIL Image pixel manipulation 
+   140ms for 1a vanilla C version using ctypes, passing PIL.tobytes
+   138ms for 1b vanilla C version using ctypes, passing numpy array
+   127ms for 2a numba @njit decorator on numpy array
+   116ms for 2b cython version using standard import passing numpy array
+   118ms for 3 standard C python module import passing PIL.tobytes
+   115ms for 4a vanilla rust version using ctypes, passing PIL.tobytes
+   116ms for 4b vanilla rust version using ctypes, passing numpy array
+   169ms for 4c python module using rust pyo3 passing numpy array
 ```
 
 1. Using a simplified version of the migurski C code `atk_mod.c` compiled
@@ -71,6 +71,9 @@ to a shared object using:
   
 
   ``` bash
+  # on raspbian I had to
+  # sudo apt-get install llvm
+  # before this..
   pip3 install numba --user
   ```
 
@@ -146,7 +149,7 @@ relatively easily (for someone new to rust!) modified from the cython code.
 A noticeable difference is the explicit casting between i32, u8 and usize.
 
   ``` bash
-  cd rust_module
+  cd rust
   cargo build --release
   cd ..
   ```
@@ -157,6 +160,10 @@ A noticeable difference is the explicit casting between i32, u8 and usize.
   default to creating a debug version.
 
   ``` bash
+  # pyo3 has to use nightly
+  rustup install nightly
+  rustup default nightly
+  # 
   cd pyo3_module
   cargo build --release
   mv target/release/libatk_mod_rm.so ../atk_mod_rm.so
